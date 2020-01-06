@@ -14,11 +14,14 @@ const char password[] = "oscnet1324";
 
 const IPAddress serverIp(192,168,4,1);
 const unsigned int serverPort = 2000;
+const unsigned int localPort = 2010;
 
 char logBuffer[256];
 
 WiFiUDP Udp;
 OSCErrorCode error;
+
+unsigned long lastOSCMessageTime = 0;
 
 void setup()
 {
@@ -29,41 +32,47 @@ void setup()
 
 void ensureWiFiConnected() {
     if(WiFi.status() != WL_CONNECTED) {
-
+        Serial.print("Connecting to WiFi");
+        WiFi.begin(ssid, password);
+        while(WiFi.status()!=WL_CONNECTED) {
+            Serial.print(".");
+            delay(500);
+        }
+        Serial.println();
+        Serial.println("WiFi connected");
+        Serial.print("IP address: ");
+        Serial.println(WiFi.localIP());
+        Udp.begin(localPort);
     }
 }
+
+void sendOSCMessage(OSCMessage &msg) {
+    Udp.beginPacket(serverIp, serverPort);
+    msg.send(Udp);
+    Udp.endPacket();
+}
+
+void setSolidColourMessage(OSCMessage &msg) {
+    msg.empty();
+    msg.setAddress("/OSCTest/solidColour");
+    msg.add(0x99FF22);
+}
+
+// msg.dispatch("/*/fire", setFireState);
+// msg.dispatch("/*/rainbow", setRainbowState);
+// msg.dispatch("/*/juggle", setJuggleState);
+// msg.dispatch("/*/sinelon", setSinelonState);
 
 void loop()
 {
     ensureWiFiConnected();
 
-    //OSCBundle bundle;
-    OSCMessage msg;
-    int size = Udp.parsePacket();
-
-    if (size > 0)
-    {
-        while (size--)
-        {
-            msg.fill(Udp.read());
-        }
-        if (!msg.hasError())
-        {
-            // msg.dispatch("/*/solidColour", solidColour);
-            // msg.dispatch("/*/solidColourRed", solidColourRed);
-            // msg.dispatch("/*/solidColourGreen", solidColourGreen);
-            // msg.dispatch("/*/solidColourBlue", solidColourBlue);
-            // msg.dispatch("/*/fire", setFireState);
-            // msg.dispatch("/*/rainbow", setRainbowState);
-            // msg.dispatch("/*/juggle", setJuggleState);
-            // msg.dispatch("/*/sinelon", setSinelonState);
-            // msg.dispatch("/*/brightness", setBrightness);
-        }
-        else
-        {
-            error = msg.getError();
-            Serial.print("error: ");
-            Serial.println(error);
-        }
+    if(millis()-lastOSCMessageTime > 10000) {
+        Serial.println("Sending solid colour request");
+        OSCMessage msg("/");
+        setSolidColourMessage(msg);
+        sendOSCMessage(msg);
+        Serial.println("Sent solid colour request");
+        lastOSCMessageTime = millis();
     }
 }
