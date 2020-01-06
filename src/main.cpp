@@ -22,6 +22,7 @@ WiFiUDP Udp;
 OSCErrorCode error;
 
 unsigned long lastOSCMessageTime = 0;
+uint8_t message = 0;
 
 void setup()
 {
@@ -52,27 +53,87 @@ void sendOSCMessage(OSCMessage &msg) {
     Udp.endPacket();
 }
 
-void setSolidColourMessage(OSCMessage &msg) {
+void setSolidColourMessage(OSCMessage &msg, uint32_t colour) {
     msg.empty();
     msg.setAddress("/OSCTest/solidColour");
-    msg.add(0x99FF22);
+    msg.add(colour);
+    sprintf(logBuffer, "Solid colour (0x%6.6X) message", colour);
+    Serial.println(logBuffer);
 }
 
-// msg.dispatch("/*/fire", setFireState);
-// msg.dispatch("/*/rainbow", setRainbowState);
-// msg.dispatch("/*/juggle", setJuggleState);
-// msg.dispatch("/*/sinelon", setSinelonState);
+void setFirePatternMessage(OSCMessage &msg) {
+    msg.empty();
+    msg.setAddress("/OSCTest/fire");
+    Serial.println("Fire pattern message");
+}
+
+void setRainbowPatternMessage(OSCMessage &msg) {
+    msg.empty();
+    msg.setAddress("/OSCTest/rainbow");
+    Serial.println("Rainbow pattern message");
+}
+
+void setJugglePatternMessage(OSCMessage &msg) {
+    msg.empty();
+    msg.setAddress("/OSCTest/juggle");
+    Serial.println("Juggle pattern message");
+}
+
+void setSinelonPatternMessage(OSCMessage &msg) {
+    msg.empty();
+    msg.setAddress("/OSCTest/sinelon");
+    Serial.println("Sinelon pattern message");
+}
 
 void loop()
 {
     ensureWiFiConnected();
 
     if(millis()-lastOSCMessageTime > 10000) {
-        Serial.println("Sending solid colour request");
+        Serial.println("Sending message");
         OSCMessage msg("/");
-        setSolidColourMessage(msg);
+
+        switch (message)
+        {
+        case 0:
+            setSolidColourMessage(msg, 0xFF0000);
+            break;
+        case 1:
+            setSolidColourMessage(msg, 0xFFFF00);
+            break;
+        case 2:
+            setSolidColourMessage(msg, 0x00FF00);
+            break;
+        case 3:
+            setSolidColourMessage(msg, 0x00FFFF);
+            break;
+        case 4:
+            setSolidColourMessage(msg, 0x0000FF);
+            break;
+        case 5:
+            setSolidColourMessage(msg, 0xFF00FF);
+            break;
+        case 6:
+            setFirePatternMessage(msg);
+            break;
+        case 7:
+            setRainbowPatternMessage(msg);
+            break;
+        case 8:
+            setJugglePatternMessage(msg);
+            break;
+        case 9:
+            setSinelonPatternMessage(msg);
+            break;
+        default:
+            setSolidColourMessage(msg, 0x100000);
+            break;
+        }
+
         sendOSCMessage(msg);
-        Serial.println("Sent solid colour request");
+        Serial.println("Sent message");
+        message++;
+        message %= 10;
         lastOSCMessageTime = millis();
     }
 }
